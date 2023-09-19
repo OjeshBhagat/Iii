@@ -1,70 +1,115 @@
-# Iii
-H
-To convert the code you provided into a sales order report format using Bootstrap, you can make several modifications. Here's an example of how you can structure your code:
+I understand your request. Here's the full modified code with the sorting functionality added:
 
-```jsx
-import React, { useEffect, useState } from 'react';
-import { Table, TableContainer, TableHead, TableBody, TableCell, TableRow, Paper, Button } from 'react-bootstrap';
-import 'bootstrap/dist/css/bootstrap.min.css';
+```javascript
+import React, { useState, useEffect } from "react";
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from "@mui/material";
+import ViewAllPopUp from "./ViewAllPopUp";
+import { getExpenseByEmployee } from "../../service/ApiService";
 
-// Assuming you have a function to fetch sales order data
-async function fetchSalesOrders() {
-  try {
-    // Fetch your sales order data here
-    const response = await fetch('your-api-endpoint-for-sales-orders');
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching sales orders:', error);
-    return [];
-  }
-}
+const viewAllButtonStyle = {
+  float: "right",
+  marginBottom: "12px",
+  fontSize: "11px",
+  backgroundColor: "#e7e7e7",
+};
 
-function SalesOrderReport() {
-  const [salesOrders, setSalesOrders] = useState([]);
+function ExpenseHistory() {
+  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+  const [data, setData] = useState([]);
+  const [run, setRun] = useState(false);
+  const [sortOrder, setSortOrder] = useState("asc"); // Default sorting order is ascending
 
   useEffect(() => {
-    fetchSalesOrders().then((data) => {
-      setSalesOrders(data);
+    getExpenseByEmployee()
+      .then((response) => {
+        setData(response.data);
+        console.log(response.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+
+    setRun(true);
+  }, [run]);
+
+  const openViewAll = () => {
+    setIsViewAllOpen(true);
+  };
+
+  const closeViewAll = () => {
+    setIsViewAllOpen(false);
+  };
+
+  const handleSort = () => {
+    // Toggle sorting order between "asc" and "desc"
+    const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
+
+    // Sort the data based on the current sorting order
+    const sortedData = [...data].sort((a, b) => {
+      if (newSortOrder === "asc") {
+        return a.amount - b.amount;
+      } else {
+        return b.amount - a.amount;
+      }
     });
-  }, []);
+
+    // Update the sorted data and sorting order state
+    setData(sortedData);
+    setSortOrder(newSortOrder);
+  };
 
   return (
     <div>
-      <h1>Sales Order Report</h1>
-      <TableContainer component={Paper} style={{ marginBottom: '16px' }}>
-        <Table striped bordered hover>
-          <thead>
-            <tr>
-              <th>Order Number</th>
-              <th>Customer Name</th>
-              <th>Total Amount</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesOrders.map((order) => (
-              <tr key={order.orderNumber}>
-                <td>{order.orderNumber}</td>
-                <td>{order.customerName}</td>
-                <td>{order.totalAmount}</td>
-                <td>{order.status}</td>
-                <td>
-                  <Button variant="info">View Details</Button>
-                </td>
-              </tr>
+      <div style={viewAllButtonStyle}>
+        <Button
+          variant="contained"
+          class="btn btn-light"
+          onClick={openViewAll}
+          style={{ fontSize: "14px", fontWeight: "bold", color: "black" }}
+        >
+          All Expenses
+        </Button>
+      </div>
+
+      <TableContainer component={Paper} style={{ marginBottom: "16px" }}>
+        <Table aria-label="Expense History Table">
+          <TableHead>
+            <TableRow>
+              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>ID</TableCell>
+              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Category</TableCell>
+              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>
+                Amount{" "}
+                <Button variant="text" onClick={handleSort}>
+                  {sortOrder === "asc" ? "↑" : "↓"}
+                </Button>
+              </TableCell>
+              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Status</TableCell>
+              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Receipt</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {data.map((expense) => (
+              <TableRow key={expense.expense_id}>
+                <TableCell>{expense.expense_id}</TableCell>
+                <TableCell>{expense.category}</TableCell>
+                <TableCell>{expense.amount.toFixed(2)}</TableCell>
+                <TableCell>{expense.status}</TableCell>
+                <TableCell>
+                  <Button variant="light" color="primary" style={{ backgroundColor: "#e7e7e7", color: "black" }}>
+                    View
+                  </Button>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
+          </TableBody>
         </Table>
       </TableContainer>
+      <ViewAllPopUp open={isViewAllOpen} handleClose={closeViewAll} />
     </div>
   );
 }
 
-export default SalesOrderReport;
+export default ExpenseHistory;
 ```
 
-In this example, we've used the `react-bootstrap` library to style the table and buttons. You should replace `'your-api-endpoint-for-sales-orders'` with the actual API endpoint to fetch your sales order data.
-
-This code creates a simple sales order report with columns for Order Number, Customer Name, Total Amount, Status, and an "Actions" column with a "View Details" button for each order. You can further customize the styling and functionality as needed for your specific requirements.
+Now, you have the sorting functionality for the "Amount" column in your Expense History table. It will toggle between ascending and descending order when you click the sorting button.
