@@ -1,115 +1,89 @@
-I understand your request. Here's the full modified code with the sorting functionality added:
+IDENTIFICATION DIVISION.
+PROGRAM-ID. SELECT_BACKUP_DELETE.
+ENVIRONMENT DIVISION.
+INPUT-OUTPUT SECTION.
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+01  CONTROL-NUMBER-IN   PIC X(10).
+01  CONTROL-NUMBER-DB   PIC X(10).
+01  FIELD-1             PIC X(20).
+01  FIELD-2             PIC X(30).
+01  FIELD-3             PIC X(40).
+01  SQLCODE             PIC S9(9) COMP.
+EXEC SQL INCLUDE SQLCA END-EXEC.
+PROCEDURE DIVISION.
+MAIN-PARAGRAPH.
+    DISPLAY "Enter Control Number: ".
+    ACCEPT CONTROL-NUMBER-IN.
 
-```javascript
-import React, { useState, useEffect } from "react";
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button } from "@mui/material";
-import ViewAllPopUp from "./ViewAllPopUp";
-import { getExpenseByEmployee } from "../../service/ApiService";
+    EXEC SQL
+        CONNECT TO your_database_name
+    END-EXEC.
 
-const viewAllButtonStyle = {
-  float: "right",
-  marginBottom: "12px",
-  fontSize: "11px",
-  backgroundColor: "#e7e7e7",
-};
+    IF SQLCODE = 0
+    THEN
+        EXEC SQL
+            DECLARE CURSOR1 CURSOR FOR
+            SELECT CONTROL_NUMBER, FIELD1, FIELD2, FIELD3
+            FROM YOUR_TABLE_NAME
+            WHERE CONTROL_NUMBER = :CONTROL-NUMBER-IN
+            FETCH FIRST 1 ROW ONLY
+        END-EXEC.
 
-function ExpenseHistory() {
-  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
-  const [data, setData] = useState([]);
-  const [run, setRun] = useState(false);
-  const [sortOrder, setSortOrder] = useState("asc"); // Default sorting order is ascending
+        IF SQLCODE = 0
+        THEN
+            EXEC SQL
+                OPEN CURSOR1
+            END-EXEC.
 
-  useEffect(() => {
-    getExpenseByEmployee()
-      .then((response) => {
-        setData(response.data);
-        console.log(response.data);
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+            EXEC SQL
+                FETCH CURSOR1 INTO
+                    :CONTROL-NUMBER-DB, :FIELD-1, :FIELD-2, :FIELD-3
+            END-EXEC.
 
-    setRun(true);
-  }, [run]);
+            IF SQLCODE = 0
+            THEN
+                EXEC SQL
+                    INSERT INTO BACKUP_TABLE
+                    VALUES (:CONTROL-NUMBER-DB, :FIELD-1, :FIELD-2, :FIELD-3)
+                END-EXEC.
 
-  const openViewAll = () => {
-    setIsViewAllOpen(true);
-  };
+                IF SQLCODE = 0
+                THEN
+                    EXEC SQL
+                        DELETE FROM YOUR_TABLE_NAME
+                        WHERE CONTROL_NUMBER = :CONTROL-NUMBER-IN
+                    END-EXEC.
 
-  const closeViewAll = () => {
-    setIsViewAllOpen(false);
-  };
+                    IF SQLCODE = 0
+                    THEN
+                        DISPLAY "Record backed up and deleted successfully."
+                    ELSE
+                        DISPLAY "Error in deleting record."
+                    END-IF.
 
-  const handleSort = () => {
-    // Toggle sorting order between "asc" and "desc"
-    const newSortOrder = sortOrder === "asc" ? "desc" : "asc";
+                ELSE
+                    DISPLAY "Error in backing up record."
+                END-IF.
 
-    // Sort the data based on the current sorting order
-    const sortedData = [...data].sort((a, b) => {
-      if (newSortOrder === "asc") {
-        return a.amount - b.amount;
-      } else {
-        return b.amount - a.amount;
-      }
-    });
+            ELSE
+                DISPLAY "No record found for Control Number: " CONTROL-NUMBER-IN
+            END-IF.
 
-    // Update the sorted data and sorting order state
-    setData(sortedData);
-    setSortOrder(newSortOrder);
-  };
+            EXEC SQL
+                CLOSE CURSOR1
+            END-EXEC.
 
-  return (
-    <div>
-      <div style={viewAllButtonStyle}>
-        <Button
-          variant="contained"
-          class="btn btn-light"
-          onClick={openViewAll}
-          style={{ fontSize: "14px", fontWeight: "bold", color: "black" }}
-        >
-          All Expenses
-        </Button>
-      </div>
+        ELSE
+            DISPLAY "Error in fetching record."
+        END-IF.
 
-      <TableContainer component={Paper} style={{ marginBottom: "16px" }}>
-        <Table aria-label="Expense History Table">
-          <TableHead>
-            <TableRow>
-              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>ID</TableCell>
-              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Category</TableCell>
-              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>
-                Amount{" "}
-                <Button variant="text" onClick={handleSort}>
-                  {sortOrder === "asc" ? "↑" : "↓"}
-                </Button>
-              </TableCell>
-              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Status</TableCell>
-              <TableCell style={{ fontSize: "18px", fontWeight: "bold", backgroundColor: "#cfd7e8" }}>Receipt</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.map((expense) => (
-              <TableRow key={expense.expense_id}>
-                <TableCell>{expense.expense_id}</TableCell>
-                <TableCell>{expense.category}</TableCell>
-                <TableCell>{expense.amount.toFixed(2)}</TableCell>
-                <TableCell>{expense.status}</TableCell>
-                <TableCell>
-                  <Button variant="light" color="primary" style={{ backgroundColor: "#e7e7e7", color: "black" }}>
-                    View
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <ViewAllPopUp open={isViewAllOpen} handleClose={closeViewAll} />
-    </div>
-  );
-}
+        EXEC SQL
+            DISCONNECT
+        END-EXEC.
 
-export default ExpenseHistory;
-```
+    ELSE
+        DISPLAY "Error in connecting to the database."
+    END-IF.
 
-Now, you have the sorting functionality for the "Amount" column in your Expense History table. It will toggle between ascending and descending order when you click the sorting button.
+    STOP RUN.
